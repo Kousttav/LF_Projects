@@ -1,12 +1,10 @@
-/*  this line follower is based on
-  QTR Array
-  T6612FNG motor driver 
-  PID Controller 
-   */
+/*  High-Speed Line Follower using RLS-08
+    TB6612FNG Motor Driver
+    Optimized PID Controller for Faster Response
+*/
 
-#include <QTRSensors.h>
+#include <Wire.h>
 #include <SparkFun_TB6612.h>
-
 
 #define AIN1 5
 #define BIN1 7
@@ -22,102 +20,104 @@ const int offsetB = 1;
 Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY);
 Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY);
 
-QTRSensors qtr;
-
-
-const uint8_t SensorCount = 8;
-uint16_t sensorValues[SensorCount];
-int max_speed = 255;   // 225
-int turn = 120;
+const int SensorCount = 8;
+int sensorValues[SensorCount];
+int base_speed = 200;
+int max_speed = 255;
 int L = 0;
 int R = 0;
 int error = 0;
 int adj = 0;
 
-float Kp = 0.0728; //0.0728 @volttage 
-float Ki =0.0090;  //0.0090
-float Kd = 1;//1
+float Kp = 0.1;
+float Ki = 0.006;
+float Kd = 2.0;
 
-int P;
-int I;
-int D;
-int lastError = 0;
-
+int P, I, D, lastError = 0;
 uint16_t position;
-void setup() {
-  brake(motor1, motor2);
 
-  qtr.setTypeAnalog();
-  qtr.setSensorPins((const uint8_t[]){
-                      A0, A1, A2, A3, A4, A5, A6, A7 },
-                    SensorCount);
-  qtr.setEmitterPin(2);
-  for (uint16_t i = 0; i < 200; i++) {
-    qtr.calibrate();
-  }
-  Serial.println("Done");
+void setup() {
   Serial.begin(9600);
+  Wire.begin();
+  Wire.setClock(400000); // Fast I2C mode for quicker sensor readings
+  brake(motor1, motor2);
+  Serial.println("High-Speed RLS-08 Initialized");
 }
 
 void loop() {
-  // forward(225,225);
-  PID_control();
-  // checksensor();
-}
-void PID_control() {
-  position = qtr.readLineWhite(sensorValues);
-  Serial.print("QTR::");
-  Serial.println(position);
-  error = 3500 - position;
-//  if (position > 1000 && position < 6000) {
-    P = error;
-    I = I + error;
-    D = error - lastError;
-    lastError = error;
-
-    adj = P * Kp + I * Ki + D * Kd;
-
-    L = max_speed + adj;
-    R = max_speed - adj;
-
-    if (L > max_speed) {
-      L = max_speed;
-    }
-    if (R > max_speed) {
-      R = max_speed;
-    }
-    if (L < 0) {
-      L = 0;
-    }
-    if (R < 0) {
-      R = 0;
-    }
-    forward(L, R);
+  readRLS08();
+  if (isFinishLine()) {
+    stopMotors();
+    while (true); // Stop the loop indefinitely
   }
-  //  else{
-  //   sharp_left();
-  // }
+  PID_control();
+}
 
-  //  else if (position >=6000 && position <= 7000) {
-  //   sharp_right();
-  // }
-  // //else{
-  //   //sharp_right();
-  // //}
+void readRLS08() {
+  Wire.requestFrom(0x20, SensorCount);
+  for (int i = 0; i < SensorCount; i++) {
+    if (Wire.available()) {
+      sensorValues[i] = Wire.read();
+    }
+  }
+  position = calculatePosition();
+}
+
+uint16_t calculatePosition() {
+  long weightedSum = 0;
+  long sum = 0;
+  for (int i = 0; i < SensorCount; i++) {
+    weightedSum += (i * 1000) * sensorValues[i];
+    sum += sensorValues[i];
+  }
+  return (sum > 0) ? weightedSum / sum : 3500;
+}
+
+bool isFinishLine() {
+  int whiteCount = 0;
+  for (int i = 0; i < SensorCount; i++) {
+    if (sensorValues[i] > 200) { // Adjust threshold as needed
+      whiteCount++;
+    }
+  }
+  return whiteCount >= SensorCount; // All sensors detect white
+}
+
+void PID_control() {
+  error = 3500 - position;
+  P = error;
+  I += error;
+  D = error - lastError;
+  lastError = error;
+
+  adj = P * Kp + I * Ki + D * Kd;
   
-
-
-
+  int speed_factor = abs(error) > 2000 ? 180 : max_speed; // Slow down on sharp turns
+  L = constrain(base_speed + adj, 0, speed_factor);
+  R = constrain(base_speed - adj, 0, speed_factor);
+  
+  L = L * 0.9 + (base_speed + adj) * 0.1; // Smooth acceleration
+  R = R * 0.9 + (base_speed - adj) * 0.1;
+  
+  forward(L, R);
+}
 
 void forward(int L, int R) {
   motor1.drive(L);
   motor2.drive(R);
 }
+
 void sharp_right() {
   motor1.drive(-255);
   motor2.drive(255);
 }
+
 void sharp_left() {
   motor1.drive(255);
   motor2.drive(-255);
+}
+
+void stopMotors() {
+  motor1.drive(0);
+  motor2.drive(0);
 }
