@@ -7,12 +7,12 @@
 #include <Wire.h>
 #include <SparkFun_TB6612.h>
 
-#define AIN1 7
-#define BIN1 5
-#define AIN2 6
-#define BIN2 4
+#define AIN1 4
+#define AIN2 5
 #define PWMA 9
-#define PWMB 10
+#define BIN1 6
+#define BIN2 7
+#define PWMB 3
 #define STBY 8
 #define IR_SENSOR 12  // IR sensor connected to digital pin 12
 
@@ -23,7 +23,7 @@ Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY);
 Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY);
 
 const int SensorCount = 8;
-int sensorPins[SensorCount] = {A0, A1, A2, A3, A4, A5, 2, 3};
+int sensorPins[SensorCount] = {A0, A1, A2, A3, A4, A5, A6, A7};
 int sensorValues[SensorCount];
 int base_speed = 250;
 int max_speed = 255;
@@ -49,14 +49,18 @@ void setup() {
 
 void loop() {
   if (detectObstacle()) {
+    Serial.println("Obstacle detected!");
     perform180Turn();
     return;
   }
   
   readRLS08();
   position = calculatePosition();
+  Serial.print("Position: ");
+  Serial.println(position);
 
   if (isFinishLine()) {
+    Serial.println("Finish line detected!");
     stopMotors();
     while (true); // Stop the loop indefinitely
   }
@@ -68,7 +72,7 @@ bool detectObstacle() {
 }
 
 void perform180Turn() {
-  Serial.println("Obstacle detected! Performing 180-degree turn");
+  Serial.println("Performing 180-degree turn");
   motor1.drive(-200);
   motor2.drive(-200);
   delay(500);
@@ -115,11 +119,14 @@ bool isIntersection() {
 
 void PID_control() {
   if (isIntersection()) {
+    Serial.println("Intersection detected!");
     forward(base_speed + 20, base_speed + 20); // Increase speed slightly at intersections
     return;
   }
   
   error = 3500 - position;
+  Serial.print("Error: ");
+  Serial.println(error);
   P = error;
   I = constrain(I + error, -1000, 1000); // Prevent integral windup
   D = error - lastError;
@@ -135,15 +142,20 @@ void PID_control() {
   R = R * 0.9 + (base_speed - adj) * 0.1;
   
   if (error > 2000) {
+    Serial.println("Sharp right!");
     sharp_right();
   } else if (error < -2000) {
+    Serial.println("Sharp left!");
     sharp_left();
   } else {
+    Serial.println("Moving forward!");
     forward(L, R);
   }
 }
 
 void forward(int L, int R) {
+  Serial.print("Speed L: "); Serial.print(L);
+  Serial.print(" R: "); Serial.println(R);
   motor1.drive(L);
   motor2.drive(R);
 }
@@ -159,6 +171,7 @@ void sharp_left() {
 }
 
 void stopMotors() {
+  Serial.println("Stopping motors!");
   motor1.drive(0);
   motor2.drive(0);
 }
