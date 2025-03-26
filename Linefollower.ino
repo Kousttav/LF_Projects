@@ -1,177 +1,100 @@
-/*  High-Speed Line Follower using RLS-08
-    TB6612FNG Motor Driver
-    Optimized PID Controller for Faster Response & Meander Handling
-    Added IR sensor to detect obstacles and perform 180-degree turn
-*/
+// Motor driver pins
+#define AIN1 5
+#define AIN2 4
+#define PWMA 3
+#define BIN1 7
+#define BIN2 8
+#define PWMB 9
+#define STBY 6
 
-#include <Wire.h>
-#include <SparkFun_TB6612.h>
+// RLS-08 sensor pins
+const int sensorPins[8] = {A0, A1, A2, A3, A4, A5, A6, A7};
 
-#define AIN1 4
-#define AIN2 5
-#define PWMA 9
-#define BIN1 6
-#define BIN2 7
-#define PWMB 3
-#define STBY 8
-#define IR_SENSOR 12  // IR sensor connected to digital pin 12
+// Optimized PID constants (Fast response, no overshoot)
+float Kp = 16;   // More aggressive to take fast turns
+float Ki = 0.004;  // Small integral component for slight correction
+float Kd = 12.5;    // Strong damping to prevent overshoot
 
-const int offsetA = 1;
-const int offsetB = 1;
+// PID variables
+float error = 0, previousError = 0;
+float integral = 0;
+float derivative = 0;
+float correction = 0;
 
-Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY);
-Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY);
-
-const int SensorCount = 8;
-int sensorPins[SensorCount] = {A0, A1, A2, A3, A4, A5, A6, A7};
-int sensorValues[SensorCount];
-int base_speed = 250;
-int max_speed = 255;
-int L = 0;
-int R = 0;
-int error = 0;
-int adj = 0;
-
-float Kp = 0.2;
-float Ki = 0.005;
-float Kd = 3.0;
-
-int P, I, D, lastError = 0;
-uint16_t position;
+// Motor speed (Constant speed)
+const int baseSpeed = 155;
+const int maxSpeed = 255;
 
 void setup() {
-  Serial.begin(115200);
-  Wire.begin();
-  Wire.setClock(400000); // Fast I2C mode for quicker sensor readings
-  pinMode(IR_SENSOR, INPUT);
-  Serial.println("High-Speed RLS-08 Initialized");
+    Serial.begin(115200);
+    pinMode(AIN1, OUTPUT);
+    pinMode(AIN2, OUTPUT);
+    pinMode(PWMA, OUTPUT);
+    pinMode(BIN1, OUTPUT);
+    pinMode(BIN2, OUTPUT);
+    pinMode(PWMB, OUTPUT);
+    pinMode(STBY, OUTPUT);
+    digitalWrite(STBY, HIGH); // Enable motor driver
+}
+
+// Read sensor and calculate position error
+int getError() {
+    int sensorValues[8];
+    int weight[] = {-4, -3, -2, -1, 1, 2, 3, 4};  // Increased weights for sharper response
+    int sum = 0, total = 0;
+    bool lineDetected = false;
+
+    for (int i = 0; i < 8; i++) {
+        sensorValues[i] = analogRead(sensorPins[i]);
+
+        if (sensorValues[i] > 500) {  // Detect black line
+            sum += sensorValues[i] * weight[i];
+            total += sensorValues[i];
+            lineDetected = true;
+        }
+    }
+
+    if (!lineDetected) {
+        return (previousError < 0) ? -6 : 6;  // Stronger lost-line correction
+    }
+    
+    return (total > 0) ? sum / total : 0;
+}
+
+void setMotorSpeed(int leftSpeed, int rightSpeed) {
+    leftSpeed = constrain(leftSpeed, 0, maxSpeed);
+    rightSpeed = constrain(rightSpeed, 0, maxSpeed);
+    
+    if (leftSpeed > 0) {
+        digitalWrite(AIN1, HIGH);
+        digitalWrite(AIN2, LOW);
+        analogWrite(PWMA, leftSpeed);
+    } else {
+        digitalWrite(AIN1, LOW);
+        digitalWrite(AIN2, LOW);
+        analogWrite(PWMA, 0);
+    }
+    
+    if (rightSpeed > 0) {
+        digitalWrite(BIN1, HIGH);
+        digitalWrite(BIN2, LOW);
+        analogWrite(PWMB, rightSpeed);
+    } else {
+        digitalWrite(BIN1, LOW);
+        digitalWrite(BIN2, LOW);
+        analogWrite(PWMB, 0);
+    }
 }
 
 void loop() {
-  if (detectObstacle()) {
-    Serial.println("Obstacle detected!");
-    perform180Turn();
-    return;
-  }
-  
-  readRLS08();
-  position = calculatePosition();
-  Serial.print("Position: ");
-  Serial.println(position);
+    error = getError();
+    integral = constrain(integral + error, -40, 40);  // Reduced integral windup
+    derivative = error - previousError;
+    correction = (Kp * error) + (Ki * integral) + (Kd * derivative);
+    previousError = error;
 
-  if (isFinishLine()) {
-    Serial.println("Finish line detected!");
-    stopMotors();
-    while (true); // Stop the loop indefinitely
-  }
-  PID_control();
-}
+    int leftSpeed = baseSpeed - correction;
+    int rightSpeed = baseSpeed + correction;
 
-bool detectObstacle() {
-  return digitalRead(IR_SENSOR) == LOW; // Assuming LOW means obstacle detected
-}
-
-void perform180Turn() {
-  Serial.println("Performing 180-degree turn");
-  motor1.drive(-200);
-  motor2.drive(-200);
-  delay(500);
-  motor1.drive(200);
-  motor2.drive(-200);
-  delay(800);
-}
-
-void readRLS08() {
-  for (int i = 0; i < SensorCount; i++) {
-    sensorValues[i] = analogRead(sensorPins[i]);
-  }
-}
-
-uint16_t calculatePosition() {
-  long weightedSum = 0;
-  long sum = 0;
-  for (int i = 0; i < SensorCount; i++) {
-    weightedSum += (i * 1000) * sensorValues[i];
-    sum += sensorValues[i];
-  }
-  return (sum > 0) ? weightedSum / sum : 3500;
-}
-
-bool isFinishLine() {
-  int whiteCount = 0;
-  for (int i = 0; i < SensorCount; i++) {
-    if (sensorValues[i] > 200) { // Adjust threshold as needed
-      whiteCount++;
-    }
-  }
-  return whiteCount >= SensorCount; // All sensors detect white
-}
-
-bool isIntersection() {
-  int blackCount = 0;
-  for (int i = 0; i < SensorCount; i++) {
-    if (sensorValues[i] < 50) { // Adjust threshold for black detection
-      blackCount++;
-    }
-  }
-  return blackCount >= SensorCount; // All sensors detect black
-}
-
-void PID_control() {
-  if (isIntersection()) {
-    Serial.println("Intersection detected!");
-    forward(base_speed + 20, base_speed + 20); // Increase speed slightly at intersections
-    return;
-  }
-  
-  error = 3500 - position;
-  Serial.print("Error: ");
-  Serial.println(error);
-  P = error;
-  I = constrain(I + error, -1000, 1000); // Prevent integral windup
-  D = error - lastError;
-  lastError = error;
-
-  adj = P * Kp + I * Ki + D * Kd;
-  
-  int speed_factor = (abs(error) > 1800) ? 200 : max_speed; // Allow faster turns
-  L = constrain(base_speed + adj, 0, speed_factor);
-  R = constrain(base_speed - adj, 0, speed_factor);
-  
-  L = L * 0.9 + (base_speed + adj) * 0.1; // More aggressive acceleration
-  R = R * 0.9 + (base_speed - adj) * 0.1;
-  
-  if (error > 2000) {
-    Serial.println("Sharp right!");
-    sharp_right();
-  } else if (error < -2000) {
-    Serial.println("Sharp left!");
-    sharp_left();
-  } else {
-    Serial.println("Moving forward!");
-    forward(L, R);
-  }
-}
-
-void forward(int L, int R) {
-  Serial.print("Speed L: "); Serial.print(L);
-  Serial.print(" R: "); Serial.println(R);
-  motor1.drive(L);
-  motor2.drive(R);
-}
-
-void sharp_right() {
-  motor1.drive(-200);
-  motor2.drive(200);
-}
-
-void sharp_left() {
-  motor1.drive(200);
-  motor2.drive(-200);
-}
-
-void stopMotors() {
-  Serial.println("Stopping motors!");
-  motor1.drive(0);
-  motor2.drive(0);
+    setMotorSpeed(leftSpeed, rightSpeed);
 }
