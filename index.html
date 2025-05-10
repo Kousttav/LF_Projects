@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="./style.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>VHDL Viva Questions & Answers</h1>
+        <div class="faq">
+
+            <!-- Questions and Answers -->
+            <div class="question" onclick="toggleAnswer(1)">1. What is the Full Form of VHDL? What is its use? ❓</div>
+            <div class="answer" id="ans1">VHDL stands for <b>VHSIC Hardware Description Language</b>. It is used to model and simulate digital systems before physical implementation.</div>
+
+            <div class="question" onclick="toggleAnswer(2)">2. What do you actually mean by very high speed IC? ⚡</div>
+            <div class="answer" id="ans2">VHSIC stands for <b>Very High Speed Integrated Circuit</b>, which refers to highly complex and high-performance ICs used in advanced digital systems.</div>
+
+            <div class="question" onclick="toggleAnswer(3)">3. Define EDA. What are the steps in EDA? 🛠️</div>
+            <div class="answer" id="ans3">EDA stands for <b>Electronic Design Automation</b>. Steps include:<br>- Design Entry<br>- Synthesis<br>- Simulation<br>- Implementation<br>- Verification</div>
+
+            <div class="question" onclick="toggleAnswer(4)">4. Name the other HDL language apart from VHDL. 🔥</div>
+            <div class="answer" id="ans4">Verilog is another hardware description language (HDL) commonly used in digital design.</div>
+
+            <div class="question" onclick="toggleAnswer(5)">5. Draw Y Diagram. What is its significance? 📚</div>
+            <div class="answer" id="ans5">The Y diagram represents three domains of digital system design:<br>- Behavioral Domain<br>- Structural Domain<br>- Physical Domain</div>
+
+            <div class="question" onclick="toggleAnswer(6)">6. What is library in VHDL? What library and logic type you have used in all VHDL programs? 📚</div>
+            <div class="answer" id="ans6">A library contains predefined packages and functions.<br>Common libraries:<br>- IEEE library<br>- STD_LOGIC_1164 package for logic types<br>- numeric_std for arithmetic operations</div>
+
+            <div class="question" onclick="toggleAnswer(7)">7. What is a module in VHDL? Write the module of a 4-bit counter/4-bit adder/4-bit Register/4-bit ALU. 🧩</div>
+            <div class="answer" id="ans7">
+                A module in VHDL is described as an <b>entity</b> and its <b>architecture</b>. Example: 4-bit Counter<br>
+                <pre>
+entity counter is
+    Port ( clk, reset : in std_logic;
+           q : out std_logic_vector(3 downto 0));
+end counter;
+architecture Behavioral of counter is
+    signal temp : std_logic_vector(3 downto 0);
+begin
+    process (clk, reset)
+    begin
+        if reset = '1' then
+            temp <= "0000";
+        elsif rising_edge(clk) then
+            temp <= temp + 1;
+        end if;
+    end process;
+    q <= temp;
+end Behavioral;
+                </pre>
+            </div>
+
+            <div class="question" onclick="toggleAnswer(8)">8. How many programming styles are supported in VHDL? 💡</div>
+            <div class="answer" id="ans8">Three styles:<br>- Dataflow Modeling<br>- Structural Modeling<br>- Behavioral Modeling</div>
+
+            <div class="question" onclick="toggleAnswer(9)">9. Define Dataflow, Structural and Behavioral Modelling. 🧠</div>
+            <div class="answer" id="ans9">- Dataflow Modeling: Uses concurrent signal assignments.<br>- Structural Modeling: Uses components and interconnections.<br>- Behavioral Modeling: Describes functionality using process blocks.</div>
+
+            <div class="question" onclick="toggleAnswer(10)">10. What do you mean by concurrent execution in VHDL? Write example. 🔁</div>
+            <div class="answer" id="ans10">
+                Concurrent Execution: All statements outside processes run concurrently.<br>
+                Example:<pre>
+a <= b AND c;  -- Concurrent Assignment
+d <= a OR b;   -- Concurrent Assignment
+                </pre>
+            </div>
+
+            <div class="question" onclick="toggleAnswer(11)">11. What is the difference between <= and := operators? ⚡</div>
+            <div class="answer" id="ans11">`<=` is used for signal assignment (concurrent), while `:=` is used for variable assignment (inside processes).</div>
+
+            <div class="question" onclick="toggleAnswer(12)">12. What is a process block in VHDL? 📦</div>
+            <div class="answer" id="ans12">A process block is a sequential block that executes when any signal in its sensitivity list changes.</div>
+
+            <div class="question" onclick="toggleAnswer(13)">13. What do you understand by sensitivity list? For a Flip-Flop design what are the tentative sensitivity list? ⏲️</div>
+            <div class="answer" id="ans13">A sensitivity list defines signals that trigger process execution. For a Flip-Flop: Sensitivity list includes `clk, reset`.</div>
+
+            <div class="question" onclick="toggleAnswer(14)">14. Explain a for loop to generate a square wave. Write the code. 🔄</div>
+            <div class="answer" id="ans14">
+                <pre>
+process
+begin
+    for i in 0 to 7 loop
+        signal_name <= not signal_name;
+        wait for 10 ns;
+    end loop;
+end process;
+                </pre>
+            </div>
+
+            <div class="question" onclick="toggleAnswer(15)">15. What is the use of '&'? ➕</div>
+            <div class="answer" id="ans15">`&` is used for concatenation in VHDL.</div>
+
+            <div class="question" onclick="toggleAnswer(16)">16. How do you write a single bit and binary string like 10001101? 📝</div>
+            <div class="answer" id="ans16">Single bit: `'0'` or `'1'`<br>Binary string: `"10001101"`</div>
+
+            <div class="question" onclick="toggleAnswer(17)">17. How will you write the bus in VHDL? 🚌</div>
+            <div class="answer" id="ans17"><pre>signal bus : std_logic_vector(7 downto 0);</pre></div>
+
+            <div class="question" onclick="toggleAnswer(18)">18. Define case structure in VHDL. 🧾</div>
+            <div class="answer" id="ans18">
+                <pre>
+case sel is
+    when "00" => y <= a;
+    when "01" => y <= b;
+    when others => y <= '0';
+end case;
+                </pre>
+            </div>
+
+            <div class="question" onclick="toggleAnswer(19)">19. Write the if-else structure of JK Flip Flop. 🔄</div>
+            <div class="answer" id="ans19">
+                <pre>
+process (clk)
+begin
+    if rising_edge(clk) then
+        if reset = '1' then
+            q <= '0';
+        elsif (j = '1' and k = '0') then
+            q <= '1';
+        elsif (j = '0' and k = '1') then
+            q <= '0';
+        elsif (j = '1' and k = '1') then
+            q <= not q;
+        end if;
+    end if;
+end process;
+                </pre>
+            </div>
+
+            <div class="question" onclick="toggleAnswer(20)">20. Write the stimulus process of giving inputs to a Flip-Flop. ⏰</div>
+            <div class="answer" id="ans20">
+                <pre>
+process
+begin
+    j <= '0'; k <= '0'; clk <= '0'; wait for 10 ns;
+    j <= '1'; k <= '0'; wait for 10 ns;
+    j <= '0'; k <= '1'; wait for 10 ns;
+    j <= '1'; k <= '1'; wait for 10 ns;
+    wait;
+end process;
+                </pre>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function toggleAnswer(num) {
+            var answer = document.getElementById('ans' + num);
+            if (answer.style.display === 'block') {
+                answer.style.display = 'none';
+            } else {
+                answer.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>

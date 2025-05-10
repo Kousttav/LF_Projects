@@ -1,0 +1,99 @@
+/* Global Styles */
+body {
+    font-family: Arial, sans-serif;
+    background: #f5f7fa;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    width: 80%;
+    margin: 50px auto;
+    background: #ffffff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    padding: 20px;
+    border-radius: 10px;
+    animation: fadeIn 1.2s ease-in-out;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    animation: slideInDown 1s ease-out;
+}
+
+.faq {
+    margin-top: 20px;
+}
+
+/* Question Styling */
+.question {
+    background: #007bff;
+    color: #fff;
+    padding: 15px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.question:hover {
+    background: #0056b3;
+    transform: scale(1.03);
+}
+
+/* Answer Styling */
+.answer {
+    background: #f1f1f1;
+    padding: 15px;
+    display: none;
+    border-left: 4px solid #007bff;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Code Block Styling */
+pre {
+    background: #222;
+    color: #fff;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+}
+
+/* Animation Effects */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInDown {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        width: 95%;
+    }
+    h1 {
+        font-size: 24px;
+    }
+    .question, .answer {
+        padding: 12px;
+    }
+}
